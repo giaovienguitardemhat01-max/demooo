@@ -37,7 +37,6 @@
   img,video{max-width:100%;display:block;}
   a{color:inherit;}
 
-  /* ---------- top bar ---------- */
   .topbar{
     display:flex;
     align-items:center;
@@ -69,7 +68,6 @@
     white-space:nowrap;
   }
 
-  /* ---------- hero / viewfinder ---------- */
   .hero-wrap{
     padding:clamp(28px,6vw,56px) clamp(20px,5vw,56px) 0;
   }
@@ -193,7 +191,6 @@
   }
   .chip b{color:var(--amber);font-weight:600;}
 
-  /* ---------- stat strip below hero ---------- */
   .stat-strip{
     display:grid;
     grid-template-columns:repeat(4,1fr);
@@ -224,7 +221,6 @@
     color:var(--paper-dim);
   }
 
-  /* ---------- curriculum / filmstrip ---------- */
   .curriculum{
     padding:clamp(48px,7vw,80px) clamp(20px,5vw,56px) 80px;
     max-width:900px;
@@ -274,6 +270,11 @@
     border-radius:5px;
     font-weight:600;
     letter-spacing:.03em;
+  }
+  .reel-num.is-pending{
+    background:transparent;
+    color:var(--paper-dim);
+    border:1px dashed var(--line);
   }
   .reel-title{
     font-family:var(--display);
@@ -341,8 +342,13 @@
     padding:3px 7px;
     border-radius:5px;
   }
+  .reel-empty{
+    padding:16px 6px;
+    font-size:13.5px;
+    color:var(--paper-dim);
+    font-style:italic;
+  }
 
-  /* ---------- footer ---------- */
   footer{
     border-top:1px solid var(--line);
     padding:26px clamp(20px,5vw,56px) 40px;
@@ -376,7 +382,7 @@
 <section class="hero-wrap">
   <p class="kicker">Khu vực học viên</p>
   <h1>Chụp Ảnh &amp; Quay Dựng Video Bằng Điện Thoại</h1>
-  <p class="sub">Chào mừng bạn quay lại! Toàn bộ 44 bài giảng đã được mở khoá — học theo đúng thứ tự từng phần để đạt hiệu quả tốt nhất.</p>
+  <p class="sub">Chào mừng bạn quay lại! Học theo đúng thứ tự từng module để đạt hiệu quả tốt nhất.</p>
 
   <div class="viewfinder" id="viewfinder">
     <div class="vf-grid"></div>
@@ -387,21 +393,16 @@
 
     <div class="vf-hud-top">
       <span class="rec"><span class="rdot"></span>ĐANG PHÁT</span>
-      <span id="hud-timecode">BÀI 01 / 44 · 02:02</span>
+      <span id="hud-timecode">BÀI 1</span>
     </div>
 
     <div class="vf-media">
-      <iframe src="https://www.youtube.com/embed/990wKc7Xh3M?rel=0" title="Bài 1" allowfullscreen loading="lazy"></iframe>
+      <iframe id="hero-iframe" src="https://www.youtube.com/embed/nXKFDh5f0VA?rel=0" title="Bài 1" allowfullscreen loading="lazy"></iframe>
     </div>
 
     <div class="vf-hud-bottom">
-      <p class="now-playing"><span class="tag">PHẦN 1 · BÀI 1</span>Vì sao điện thoại có thể kiếm được tiền?</p>
-      <div class="hud-stats">
-        <span class="chip"><b>7</b> phần</span>
-        <span class="chip"><b>44</b> bài giảng</span>
-        <span class="chip"><b>3h26p</b> thời lượng</span>
-        <span class="chip"><b>∞</b> xem lại</span>
-      </div>
+      <p class="now-playing" id="now-playing"><span class="tag">MODULE 1 · BÀI 1</span>Chúng ta luôn bắt đầu từ sự thiếu tự tin</p>
+      <div class="hud-stats" id="hud-stats"></div>
     </div>
   </div>
 </section>
@@ -409,7 +410,7 @@
 <main class="curriculum">
   <div class="curriculum-head">
     <h2>📚 Toàn bộ nội dung khoá học</h2>
-    <span class="count">44 bài · 7 phần</span>
+    <span class="count" id="curriculum-count"></span>
   </div>
   <div id="reels"></div>
 </main>
@@ -423,92 +424,85 @@
 <script>
 /* =====================================================================
    DỮ LIỆU KHOÁ HỌC
-   -> Sửa trực tiếp trong mảng COURSE bên dưới để thêm link YouTube thật
-      và đổi tên bài học. Mỗi phần (part) có: title, meta (thời lượng),
-      và lessons: [{ title, duration, url }]
-      - Nếu chưa có "url", bài học sẽ hiện nhãn "CHƯA CÓ LINK".
-      - "Bài 1" đã có sẵn link/tiêu đề thật, các bài còn lại đang là
-        tên giữ chỗ (placeholder) — hãy đổi lại cho đúng nội dung.
+   -> Sửa trực tiếp trong mảng COURSE bên dưới để thêm bài học mới.
+      Mỗi module có: title, lessons: [{ title, duration, url }]
+      - "url" phải là link YouTube dạng embed: https://www.youtube.com/embed/VIDEO_ID
+        (nếu bạn có link youtu.be/VIDEO_ID?..., chỉ cần lấy đúng VIDEO_ID
+        và ghép vào dạng embed ở trên).
+      - Module nào chưa có nội dung (VD: Module 5, 7) thì để lessons: []
+        và pending: true — trang sẽ tự hiện dòng "sẽ cập nhật sau".
+      - Các con số thống kê (bao nhiêu bài, bao nhiêu module...) được
+        TÍNH TỰ ĐỘNG từ mảng này — không cần sửa tay ở đâu khác.
    ===================================================================== */
 const COURSE = [
   {
-    title: "Nền tảng & tư duy kiếm tiền từ điện thoại",
+    title: "Module 1",
     lessons: [
-      { title: "Vì sao điện thoại có thể kiếm được tiền?", duration: "02:02", url: "https://www.youtube.com/embed/990wKc7Xh3M?rel=0" },
-      { title: "Bài 2 — thêm tiêu đề tại đây", duration: "--:--" },
-      { title: "Bài 3 — thêm tiêu đề tại đây", duration: "--:--" },
-      { title: "Bài 4 — thêm tiêu đề tại đây", duration: "--:--" },
-      { title: "Bài 5 — thêm tiêu đề tại đây", duration: "--:--" },
-      { title: "Bài 6 — thêm tiêu đề tại đây", duration: "--:--" },
+      { title: "Chúng ta luôn bắt đầu từ sự thiếu tự tin", duration: "--:--", url: "https://www.youtube.com/embed/nXKFDh5f0VA" },
+      { title: "Chỉ nên học 1 video 1 ngày trong khoá này", duration: "--:--", url: "https://www.youtube.com/embed/SsyTO0kRjX4" },
+      { title: "90% người mới làm video mua sai thiết bị", duration: "--:--", url: "https://www.youtube.com/embed/5JNZogx5Vrw" },
+      { title: "Sai lầm 1: Chê thiết bị", duration: "--:--", url: "https://www.youtube.com/embed/kjvPwI93g8k" },
+      { title: "Sai lầm 2: Không canh được bố cục", duration: "--:--", url: "https://www.youtube.com/embed/vPI_BHV9LIQ" },
+      { title: "Sai lầm 3 và 4", duration: "--:--", url: "https://www.youtube.com/embed/HuzXsWwlj-4" },
     ]
   },
   {
-    title: "Làm chủ camera điện thoại",
+    title: "Module 2 — Biến Điện Thoại Thành Máy Quay",
     lessons: [
-      { title: "Bài 7 — thêm tiêu đề tại đây", duration: "--:--" },
-      { title: "Bài 8 — thêm tiêu đề tại đây", duration: "--:--" },
-      { title: "Bài 9 — thêm tiêu đề tại đây", duration: "--:--" },
-      { title: "Bài 10 — thêm tiêu đề tại đây", duration: "--:--" },
-      { title: "Bài 11 — thêm tiêu đề tại đây", duration: "--:--" },
-      { title: "Bài 12 — thêm tiêu đề tại đây", duration: "--:--" },
+      { title: "Cách tối ưu điện thoại", duration: "--:--", url: "https://www.youtube.com/embed/KKhKW0WVdW0" },
+      { title: "Chụp ảnh với 0.5, 1x và 3x", duration: "--:--", url: "https://www.youtube.com/embed/Nw0RCS2dfts" },
+      { title: "Chế độ chân dung", duration: "--:--", url: "https://www.youtube.com/embed/kg_HlfglmOI" },
+      { title: "Các chế độ quay", duration: "--:--", url: "https://www.youtube.com/embed/KmVZTv5DmlE" },
     ]
   },
   {
-    title: "Bố cục & ánh sáng",
+    title: "Module 3 — Kiến Thức - Kỹ Thuật Quay Video",
     lessons: [
-      { title: "Bài 13 — thêm tiêu đề tại đây", duration: "--:--" },
-      { title: "Bài 14 — thêm tiêu đề tại đây", duration: "--:--" },
-      { title: "Bài 15 — thêm tiêu đề tại đây", duration: "--:--" },
-      { title: "Bài 16 — thêm tiêu đề tại đây", duration: "--:--" },
-      { title: "Bài 17 — thêm tiêu đề tại đây", duration: "--:--" },
-      { title: "Bài 18 — thêm tiêu đề tại đây", duration: "--:--" },
-      { title: "Bài 19 — thêm tiêu đề tại đây", duration: "--:--" },
+      { title: "Cỡ cảnh – nền móng của mọi video", duration: "--:--", url: "https://www.youtube.com/embed/Xdney6oTTn8" },
+      { title: "Bố cục cơ bản – cách đặt chủ thể", duration: "--:--", url: "https://www.youtube.com/embed/lTZXAcBlnW0" },
+      { title: "Góc máy & cảm xúc người xem", duration: "--:--", url: "https://www.youtube.com/embed/X4sMFKJ1qJw" },
+      { title: "Ánh sáng - chìa khoá cho video triệu view", duration: "--:--", url: "https://www.youtube.com/embed/7UlHQ5dsJvs" },
+      { title: "Động tác máy cơ bản", duration: "--:--", url: "https://www.youtube.com/embed/1WgqKBWVY8w" },
+      { title: "Xác định mục tiêu quay video", duration: "--:--", url: "https://www.youtube.com/embed/ZuL8Q_HJSDA" },
     ]
   },
   {
-    title: "Quay dựng video cơ bản",
+    title: "Module 4 — Quy Trình Edit 15 Phút với Capcut",
     lessons: [
-      { title: "Bài 20 — thêm tiêu đề tại đây", duration: "--:--" },
-      { title: "Bài 21 — thêm tiêu đề tại đây", duration: "--:--" },
-      { title: "Bài 22 — thêm tiêu đề tại đây", duration: "--:--" },
-      { title: "Bài 23 — thêm tiêu đề tại đây", duration: "--:--" },
-      { title: "Bài 24 — thêm tiêu đề tại đây", duration: "--:--" },
-      { title: "Bài 25 — thêm tiêu đề tại đây", duration: "--:--" },
+      { title: "Bước quan trọng trước khi dựng", duration: "--:--", url: "https://www.youtube.com/embed/Nr-E2eKExr4" },
+      { title: "Làm quen giao diện Capcut", duration: "--:--", url: "https://www.youtube.com/embed/EoWqg04Cs4g" },
+      { title: "Cắt ghép video đơn giản", duration: "--:--", url: "https://www.youtube.com/embed/hdYxtv0ROOA" },
+      { title: "Thay đổi tốc độ cho video", duration: "--:--", url: "https://www.youtube.com/embed/s8fNpzEyzt0" },
+      { title: "Kỹ thuật chèn B-roll", duration: "--:--", url: "https://www.youtube.com/embed/XO76QSWjY-E" },
+      { title: "Chuyển cảnh phổ biến", duration: "--:--", url: "https://www.youtube.com/embed/1UQxNgctOxM" },
+      { title: "Âm thanh và hiệu ứng âm thanh", duration: "--:--", url: "https://www.youtube.com/embed/diT4l_vmxoY" },
+      { title: "Kỹ thuật thêm chữ cơ bản", duration: "--:--", url: "https://www.youtube.com/embed/QdV-FNNEff8" },
+      { title: "Mẫu văn bản", duration: "--:--", url: "https://www.youtube.com/embed/EtWn9sf7kog" },
+      { title: "Phụ đề tự động", duration: "--:--", url: "https://www.youtube.com/embed/2skRHO_k4oA" },
+      { title: "Nhãn dán", duration: "--:--", url: "https://www.youtube.com/embed/IoPYXvrlQuo" },
+      { title: "Chỉnh màu, bộ lọc và tuỳ chỉnh", duration: "--:--", url: "https://www.youtube.com/embed/OQSlD9UWw-I" },
+      { title: "Làm đẹp da không tỳ vết", duration: "--:--", url: "https://www.youtube.com/embed/7k-16D1MRWU" },
     ]
   },
   {
-    title: "Dựng video nâng cao trên điện thoại",
+    title: "Module 5",
+    pending: true,
+    lessons: []
+  },
+  {
+    title: "Module 6 — Kiếm Tiền Từ Điện Thoại",
     lessons: [
-      { title: "Bài 26 — thêm tiêu đề tại đây", duration: "--:--" },
-      { title: "Bài 27 — thêm tiêu đề tại đây", duration: "--:--" },
-      { title: "Bài 28 — thêm tiêu đề tại đây", duration: "--:--" },
-      { title: "Bài 29 — thêm tiêu đề tại đây", duration: "--:--" },
-      { title: "Bài 30 — thêm tiêu đề tại đây", duration: "--:--" },
-      { title: "Bài 31 — thêm tiêu đề tại đây", duration: "--:--" },
+      { title: "Ba loại video mà khách hàng trả tiền", duration: "--:--", url: "https://www.youtube.com/embed/5s8iIlA2cpQ" },
+      { title: "Tạo video portfolio đầu tiên", duration: "--:--", url: "https://www.youtube.com/embed/O_bqTgcAdaU" },
+      { title: "Cách tìm job đầu tiên", duration: "--:--", url: "https://www.youtube.com/embed/yHLMfnOowMU" },
+      { title: "Kỹ năng deal định giá khi nhận job", duration: "--:--", url: "https://www.youtube.com/embed/hAopPH2fVus" },
+      { title: "Lộ trình nâng cấp bản thân", duration: "--:--", url: "https://www.youtube.com/embed/XfpWcsfGapQ" },
     ]
   },
   {
-    title: "Nội dung cho quảng cáo (ads)",
-    lessons: [
-      { title: "Bài 32 — thêm tiêu đề tại đây", duration: "--:--" },
-      { title: "Bài 33 — thêm tiêu đề tại đây", duration: "--:--" },
-      { title: "Bài 34 — thêm tiêu đề tại đây", duration: "--:--" },
-      { title: "Bài 35 — thêm tiêu đề tại đây", duration: "--:--" },
-      { title: "Bài 36 — thêm tiêu đề tại đây", duration: "--:--" },
-      { title: "Bài 37 — thêm tiêu đề tại đây", duration: "--:--" },
-    ]
-  },
-  {
-    title: "Nhận việc & kiếm tiền thực tế",
-    lessons: [
-      { title: "Bài 38 — thêm tiêu đề tại đây", duration: "--:--" },
-      { title: "Bài 39 — thêm tiêu đề tại đây", duration: "--:--" },
-      { title: "Bài 40 — thêm tiêu đề tại đây", duration: "--:--" },
-      { title: "Bài 41 — thêm tiêu đề tại đây", duration: "--:--" },
-      { title: "Bài 42 — thêm tiêu đề tại đây", duration: "--:--" },
-      { title: "Bài 43 — thêm tiêu đề tại đây", duration: "--:--" },
-      { title: "Bài 44 — thêm tiêu đề tại đây", duration: "--:--" },
-    ]
+    title: "Module 7",
+    pending: true,
+    lessons: []
   },
 ];
 
@@ -522,37 +516,62 @@ function renderCourse(){
     reel.className = 'reel';
     reel.style.animationDelay = (pIdx * 0.06) + 's';
 
+    const numLabel = String(pIdx+1).padStart(2,'0');
     const head = document.createElement('div');
     head.className = 'reel-head';
     head.innerHTML = `
-      <span class="reel-num">PHẦN ${String(pIdx+1).padStart(2,'0')}</span>
-      <span class="reel-title">${part.title}</span>
+      <span class="reel-num${part.pending ? ' is-pending' : ''}">MODULE ${numLabel}</span>
+      <span class="reel-title">${part.title.replace(/^Module\s*\d+\s*(—\s*)?/,'') || 'Module ' + numLabel}</span>
       <span class="reel-meta">${part.lessons.length} bài</span>
     `;
     reel.appendChild(head);
 
-    part.lessons.forEach(lesson => {
-      lessonCounter++;
-      const row = document.createElement('div');
-      row.className = 'lesson';
-      const num = String(lessonCounter).padStart(3,'0');
-      const titleHtml = lesson.url
-        ? `<a href="${lesson.url}" target="_blank" rel="noopener">${lesson.title}</a>`
-        : `<span>${lesson.title}</span>`;
-      row.innerHTML = `
-        <span class="lesson-num">${num}</span>
-        <span class="lesson-play">▶</span>
-        <span class="lesson-title">${titleHtml}</span>
-        <span class="lesson-dur">${lesson.duration}</span>
-        ${lesson.url ? '' : '<span class="pending">CHƯA CÓ LINK</span>'}
-      `;
-      reel.appendChild(row);
-    });
+    if (part.pending || part.lessons.length === 0){
+      const empty = document.createElement('div');
+      empty.className = 'reel-empty';
+      empty.textContent = 'Nội dung module này sẽ được bổ sung sau.';
+      reel.appendChild(empty);
+    } else {
+      part.lessons.forEach(lesson => {
+        lessonCounter++;
+        const row = document.createElement('div');
+        row.className = 'lesson';
+        const num = String(lessonCounter).padStart(3,'0');
+        const titleHtml = lesson.url
+          ? `<a href="${lesson.url}" target="_blank" rel="noopener">${lesson.title}</a>`
+          : `<span>${lesson.title}</span>`;
+        row.innerHTML = `
+          <span class="lesson-num">${num}</span>
+          <span class="lesson-play">▶</span>
+          <span class="lesson-title">${titleHtml}</span>
+          <span class="lesson-dur">${lesson.duration}</span>
+          ${lesson.url ? '' : '<span class="pending">CHƯA CÓ LINK</span>'}
+        `;
+        reel.appendChild(row);
+      });
+    }
 
     frag.appendChild(reel);
   });
 
   wrap.appendChild(frag);
+
+  // ---- stats computed from data ----
+  const totalModules = COURSE.length;
+  const totalLessons = COURSE.reduce((sum,p) => sum + p.lessons.length, 0);
+  const hasAllDurations = COURSE.every(p => p.lessons.every(l => l.duration && l.duration !== '--:--'));
+  const durationLabel = hasAllDurations ? 'đã có' : 'đang cập nhật';
+
+  document.getElementById('curriculum-count').textContent = `${totalLessons} bài · ${totalModules} module`;
+
+  document.getElementById('hud-stats').innerHTML = `
+    <span class="chip"><b>${totalModules}</b> module</span>
+    <span class="chip"><b>${totalLessons}</b> bài giảng</span>
+    <span class="chip">Thời lượng: <b>${durationLabel}</b></span>
+    <span class="chip"><b>∞</b> xem lại</span>
+  `;
+
+  document.getElementById('hud-timecode').textContent = `BÀI 1 / ${totalLessons}`;
 }
 
 renderCourse();
