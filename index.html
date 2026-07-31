@@ -2,496 +2,560 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Chụp Ảnh &amp; Quay Dựng Video Bằng Điện Thoại — Em Tâm Làm Ads</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chụp Ảnh & Quay Dựng Video Bằng Điện Thoại — Khu vực học viên</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-  /* ============================================================
-     DESIGN TOKENS
-     ink     — nền chính, màu "thân máy ảnh"
-     surface — nền thẻ/khối, "vỏ nhựa mờ"
-     line    — viền mảnh, "vân lưới tản nhiệt"
-     gold    — điểm nhấn chính, màu khung lấy nét AE/AF
-     red     — điểm nhấn phụ, đèn "REC" đang quay
-     green   — trạng thái đã mở khoá / hoàn thành
-     paper   — chữ chính, màu "kính ngắm"
-     ============================================================ */
   :root{
-    --ink:#121319;
-    --surface:#1c1e27;
-    --surface-2:#22242f;
-    --line:#2b2e3a;
-    --gold:#f4c430;
-    --red:#ff5b54;
-    --green:#6fcf97;
+    --ink:#12151a;
+    --panel:#1b1f26;
+    --panel-2:#20252d;
+    --line:#2a2f38;
+    --amber:#f0a93a;
+    --amber-dim:#8a6626;
+    --signal:#5fd9c7;
     --paper:#f3f1ea;
-    --muted:#9a9dac;
-    --display: 'Be Vietnam Pro', sans-serif;
-    --mono: 'IBM Plex Mono', monospace;
-    --radius: 14px;
+    --paper-dim:#a7abb4;
+    --radius:14px;
+    --display:'Space Grotesk',sans-serif;
+    --body:'Be Vietnam Pro',sans-serif;
+    --mono:'JetBrains Mono',monospace;
   }
 
-  *{ box-sizing:border-box; }
-  html{ scroll-behavior:smooth; }
-  @media (prefers-reduced-motion: reduce){
-    html{ scroll-behavior:auto; }
-    *{ animation-duration:0.001ms !important; transition-duration:0.001ms !important; }
-  }
-
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
   body{
     margin:0;
     background:var(--ink);
     color:var(--paper);
-    font-family:var(--display);
+    font-family:var(--body);
+    line-height:1.5;
     -webkit-font-smoothing:antialiased;
   }
-
-  a{ color:inherit; }
-  button{ font-family:inherit; }
+  img,video{max-width:100%;display:block;}
+  a{color:inherit;}
 
   /* ---------- top bar ---------- */
   .topbar{
-    position:sticky; top:0; z-index:50;
-    display:flex; align-items:center; justify-content:space-between;
-    padding:14px 24px;
-    background:rgba(18,19,25,0.9);
-    backdrop-filter:blur(10px);
-    border-bottom:1px solid var(--line);
-  }
-  .brand{ display:flex; align-items:center; gap:10px; font-weight:800; letter-spacing:0.01em; }
-  .brand .dot{ width:9px; height:9px; border-radius:50%; background:var(--red); box-shadow:0 0 0 3px rgba(255,91,84,0.18); }
-  .brand small{ display:block; font-family:var(--mono); font-size:11px; color:var(--muted); font-weight:400; letter-spacing:0.06em; }
-  .badge{
-    display:flex; align-items:center; gap:6px;
-    font-family:var(--mono); font-size:12px; color:var(--green);
-    border:1px solid rgba(111,207,151,0.35); background:rgba(111,207,151,0.08);
-    padding:6px 12px; border-radius:999px;
-  }
-
-  /* ---------- timeline scrubber (signature element) ---------- */
-  .scrubber-wrap{
-    position:sticky; top:57px; z-index:40;
-    background:var(--ink);
-    border-bottom:1px solid var(--line);
-    padding:10px 24px 0;
-  }
-  .scrubber{
-    position:relative;
     display:flex;
-    gap:2px;
-    padding-bottom:10px;
-    overflow-x:auto;
-    scrollbar-width:none;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+    padding:18px clamp(20px,5vw,56px);
+    border-bottom:1px solid var(--line);
   }
-  .scrubber::-webkit-scrollbar{ display:none; }
-  .seg{
-    position:relative;
-    flex:1 0 auto;
-    min-width:104px;
-    background:var(--surface);
-    border:1px solid var(--line);
-    border-radius:8px;
-    padding:8px 10px;
-    cursor:pointer;
-    text-align:left;
-    color:var(--muted);
-    background-image:repeating-linear-gradient(90deg, var(--line) 0 1px, transparent 1px 8px);
-    background-position:bottom left;
-    background-size:100% 5px;
-    background-repeat:no-repeat;
-    transition:border-color .18s ease, color .18s ease, background-color .18s ease;
+  .brand{
+    display:flex;align-items:center;gap:10px;
+    font-family:var(--display);
+    font-weight:600;
+    letter-spacing:.02em;
   }
-  .seg .p{ font-size:12px; font-weight:700; color:var(--paper); }
-  .seg .c{ font-family:var(--mono); font-size:10.5px; }
-  .seg.active{ border-color:var(--gold); color:var(--gold); }
-  .seg.active .p{ color:var(--gold); }
-  .playhead{
-    position:absolute; top:-9px; width:0; height:0;
-    border-left:6px solid transparent; border-right:6px solid transparent;
-    border-top:8px solid var(--gold);
-    transition:left .25s cubic-bezier(.4,0,.2,1);
+  .brand .dot{
+    width:9px;height:9px;border-radius:50%;
+    background:var(--amber);
+    box-shadow:0 0 0 3px rgba(240,169,58,.18);
+  }
+  .badge{
+    font-family:var(--mono);
+    font-size:12px;
+    letter-spacing:.04em;
+    color:var(--signal);
+    border:1px solid rgba(95,217,199,.35);
+    background:rgba(95,217,199,.08);
+    padding:5px 10px;
+    border-radius:999px;
+    white-space:nowrap;
   }
 
-  /* ---------- hero / player ---------- */
-  .hero{ max-width:960px; margin:32px auto 0; padding:0 24px; }
-  .player-frame{
+  /* ---------- hero / viewfinder ---------- */
+  .hero-wrap{
+    padding:clamp(28px,6vw,56px) clamp(20px,5vw,56px) 0;
+  }
+  .kicker{
+    font-family:var(--mono);
+    font-size:12px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--signal);
+    margin:0 0 14px;
+  }
+  h1{
+    font-family:var(--display);
+    font-weight:600;
+    font-size:clamp(28px,4.4vw,46px);
+    line-height:1.08;
+    margin:0 0 12px;
+    max-width:22ch;
+  }
+  .sub{
+    color:var(--paper-dim);
+    font-size:16px;
+    max-width:56ch;
+    margin:0 0 28px;
+  }
+
+  .viewfinder{
     position:relative;
-    background:#000;
     border-radius:var(--radius);
-    border:1px solid var(--line);
-    overflow:hidden;
+    background:#000;
     aspect-ratio:16/9;
+    overflow:hidden;
+    border:1px solid var(--line);
+    opacity:0;
+    transform:scale(.98);
+    animation:vf-in .7s cubic-bezier(.2,.7,.2,1) forwards .1s;
   }
-  .player-frame iframe{ width:100%; height:100%; border:0; display:block; }
-  .chrome-top{
-    position:absolute; top:0; left:0; right:0;
-    display:flex; align-items:center; justify-content:space-between;
-    padding:10px 12px;
-    background:linear-gradient(180deg, rgba(0,0,0,0.55), transparent);
+  @keyframes vf-in{to{opacity:1;transform:scale(1);}}
+
+  .vf-grid{
+    position:absolute;inset:0;
+    background-image:
+      linear-gradient(to right, rgba(243,241,234,.08) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(243,241,234,.08) 1px, transparent 1px);
+    background-size:33.333% 33.333%;
     pointer-events:none;
-    font-family:var(--mono); font-size:11px; color:var(--paper);
+    z-index:3;
   }
-  .rec{ display:flex; align-items:center; gap:6px; color:var(--red); }
-  .rec .dot{ width:7px; height:7px; border-radius:50%; background:var(--red); animation:pulse 1.6s ease-in-out infinite; }
-  @keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:.35;} }
-  .corner{ position:absolute; width:18px; height:18px; border:2px solid var(--gold); opacity:.8; pointer-events:none; }
-  .corner.tl{ top:10px; left:10px; border-right:0; border-bottom:0; }
-  .corner.tr{ top:10px; right:10px; border-left:0; border-bottom:0; }
-  .corner.bl{ bottom:10px; left:10px; border-right:0; border-top:0; }
-  .corner.br{ bottom:10px; right:10px; border-left:0; border-top:0; }
+  .vf-corner{
+    position:absolute;
+    width:26px;height:26px;
+    border:2px solid var(--amber);
+    z-index:4;
+    pointer-events:none;
+    opacity:.9;
+  }
+  .vf-corner.tl{top:14px;left:14px;border-right:none;border-bottom:none;}
+  .vf-corner.tr{top:14px;right:14px;border-left:none;border-bottom:none;}
+  .vf-corner.bl{bottom:14px;left:14px;border-right:none;border-top:none;}
+  .vf-corner.br{bottom:14px;right:14px;border-left:none;border-top:none;}
 
-  .now-playing{ margin-top:16px; }
-  .now-playing .meta{
-    font-family:var(--mono); font-size:12px; color:var(--gold);
-    letter-spacing:.04em; text-transform:uppercase; margin-bottom:6px;
+  .vf-hud-top{
+    position:absolute;top:0;left:0;right:0;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:14px 18px;
+    z-index:5;
+    font-family:var(--mono);
+    font-size:12px;
+    color:var(--paper);
+    background:linear-gradient(to bottom, rgba(0,0,0,.55), transparent);
   }
-  .now-playing h1{ font-size:clamp(22px,3.4vw,30px); margin:0; font-weight:800; line-height:1.25; }
+  .rec{display:flex;align-items:center;gap:7px;letter-spacing:.06em;}
+  .rec .rdot{
+    width:8px;height:8px;border-radius:50%;
+    background:#ff5a5a;
+    animation:pulse 1.8s ease-in-out infinite;
+  }
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.35;}}
 
-  /* ---------- stats strip ---------- */
-  .stats{
-    max-width:960px; margin:28px auto 0; padding:0 24px;
-    display:grid; grid-template-columns:repeat(4,1fr); gap:1px;
-    background:var(--line); border:1px solid var(--line); border-radius:var(--radius); overflow:hidden;
+  .vf-media{
+    position:absolute;inset:0;
+    width:100%;height:100%;
   }
-  .stat{ background:var(--surface); padding:16px 14px; }
-  .stat .n{ font-family:var(--mono); font-size:22px; color:var(--gold); font-weight:500; }
-  .stat .l{ font-size:12px; color:var(--muted); margin-top:2px; }
+  .vf-media iframe{
+    width:100%;height:100%;border:0;
+  }
 
-  /* ---------- curriculum ---------- */
-  .curriculum{ max-width:960px; margin:40px auto 80px; padding:0 24px; }
-  .curriculum > h2{ font-size:20px; margin:0 0 16px; font-weight:800; }
-  .part{
-    border:1px solid var(--line); border-radius:var(--radius);
-    margin-bottom:12px; overflow:hidden; background:var(--surface);
-    scroll-margin-top:130px;
+  .vf-hud-bottom{
+    position:absolute;bottom:0;left:0;right:0;
+    z-index:5;
+    padding:14px 18px 16px;
+    background:linear-gradient(to top, rgba(0,0,0,.7), transparent);
   }
-  .part-head{
-    display:flex; align-items:center; justify-content:space-between;
-    padding:16px 18px; cursor:pointer; user-select:none;
-    background:var(--surface-2);
+  .now-playing{
+    font-family:var(--body);
+    font-weight:600;
+    font-size:15px;
+    margin:0 0 10px;
   }
-  .part-head .left{ display:flex; align-items:baseline; gap:10px; }
-  .part-head .tag{ font-family:var(--mono); font-size:11px; color:var(--muted); }
-  .part-head h3{ margin:0; font-size:15px; font-weight:700; }
-  .part-head .count{ font-family:var(--mono); font-size:12px; color:var(--muted); }
-  .chev{ transition:transform .2s ease; color:var(--muted); }
-  .part.open .chev{ transform:rotate(180deg); }
+  .now-playing .tag{
+    font-family:var(--mono);
+    font-weight:400;
+    font-size:12px;
+    color:var(--signal);
+    margin-right:8px;
+  }
+  .hud-stats{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+  }
+  .chip{
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:.03em;
+    color:var(--paper);
+    border:1px solid rgba(243,241,234,.22);
+    background:rgba(0,0,0,.35);
+    padding:5px 9px;
+    border-radius:6px;
+  }
+  .chip b{color:var(--amber);font-weight:600;}
 
-  .lessons{ max-height:0; overflow:hidden; transition:max-height .28s ease; }
-  .part.open .lessons{ max-height:2000px; }
+  /* ---------- stat strip below hero ---------- */
+  .stat-strip{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:1px;
+    background:var(--line);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    overflow:hidden;
+    margin:22px 0 0;
+  }
+  .stat{
+    background:var(--panel);
+    padding:18px 16px;
+    text-align:center;
+  }
+  .stat .num{
+    font-family:var(--display);
+    font-weight:700;
+    font-size:clamp(22px,3vw,30px);
+    color:var(--amber);
+    display:block;
+  }
+  .stat .lbl{
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    color:var(--paper-dim);
+  }
+
+  /* ---------- curriculum / filmstrip ---------- */
+  .curriculum{
+    padding:clamp(48px,7vw,80px) clamp(20px,5vw,56px) 80px;
+    max-width:900px;
+    margin:0 auto;
+  }
+  .curriculum-head{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:16px;
+    margin-bottom:28px;
+    flex-wrap:wrap;
+  }
+  .curriculum-head h2{
+    font-family:var(--display);
+    font-size:clamp(20px,2.6vw,26px);
+    margin:0;
+  }
+  .curriculum-head .count{
+    font-family:var(--mono);
+    font-size:12px;
+    color:var(--paper-dim);
+  }
+
+  .reel{
+    margin-bottom:34px;
+    opacity:0;
+    transform:translateY(10px);
+    animation:reel-in .6s ease forwards;
+  }
+  @keyframes reel-in{to{opacity:1;transform:translateY(0);}}
+
+  .reel-head{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding-bottom:12px;
+    margin-bottom:4px;
+    border-bottom:1px solid var(--line);
+  }
+  .reel-num{
+    font-family:var(--mono);
+    font-size:12px;
+    color:var(--ink);
+    background:var(--amber);
+    padding:3px 8px;
+    border-radius:5px;
+    font-weight:600;
+    letter-spacing:.03em;
+  }
+  .reel-title{
+    font-family:var(--display);
+    font-weight:600;
+    font-size:16px;
+  }
+  .reel-meta{
+    margin-left:auto;
+    font-family:var(--mono);
+    font-size:11px;
+    color:var(--paper-dim);
+  }
+
   .lesson{
-    display:flex; align-items:center; gap:12px;
-    padding:12px 18px; border-top:1px solid var(--line);
-    cursor:pointer; transition:background-color .15s ease;
+    display:flex;
+    align-items:center;
+    gap:14px;
+    padding:13px 6px;
+    border-bottom:1px dashed var(--line);
+    transition:background .15s ease;
   }
-  .lesson:hover{ background:rgba(244,196,48,0.05); }
-  .lesson .code{ font-family:var(--mono); font-size:12px; color:var(--gold); width:26px; flex:none; }
-  .lesson .title{ flex:1; font-size:14px; }
-  .lesson .title.empty{ color:var(--muted); font-style:italic; }
-  .lesson .dur{ font-family:var(--mono); font-size:12px; color:var(--muted); flex:none; }
-  .lesson .icon{ flex:none; width:16px; text-align:center; color:var(--muted); }
-  .lesson.has-link .icon{ color:var(--green); }
+  .lesson:hover{background:var(--panel-2);}
+  .lesson-num{
+    font-family:var(--mono);
+    font-size:12px;
+    color:var(--paper-dim);
+    width:34px;
+    flex:none;
+  }
+  .lesson-play{
+    flex:none;
+    width:28px;height:28px;
+    border-radius:50%;
+    border:1px solid rgba(243,241,234,.25);
+    display:flex;align-items:center;justify-content:center;
+    font-size:10px;
+    color:var(--paper-dim);
+  }
+  .lesson:hover .lesson-play{
+    border-color:var(--amber);
+    color:var(--amber);
+  }
+  .lesson-title{
+    flex:1;
+    font-size:14.5px;
+  }
+  .lesson-title a{
+    text-decoration:none;
+    color:var(--paper);
+  }
+  .lesson:hover .lesson-title a{color:var(--amber);}
+  .lesson-dur{
+    flex:none;
+    font-family:var(--mono);
+    font-size:12px;
+    color:var(--paper-dim);
+  }
+  .pending{
+    flex:none;
+    font-family:var(--mono);
+    font-size:10px;
+    letter-spacing:.04em;
+    color:var(--paper-dim);
+    border:1px dashed var(--line);
+    padding:3px 7px;
+    border-radius:5px;
+  }
 
   /* ---------- footer ---------- */
   footer{
-    border-top:1px solid var(--line); padding:28px 24px 40px;
-    text-align:center; color:var(--muted); font-size:13px;
+    border-top:1px solid var(--line);
+    padding:26px clamp(20px,5vw,56px) 40px;
+    font-size:13px;
+    color:var(--paper-dim);
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px 18px;
+    justify-content:space-between;
   }
-  footer a{ color:var(--paper); text-decoration:none; border-bottom:1px solid var(--line); }
-  footer a:hover{ border-color:var(--gold); color:var(--gold); }
-  footer .zalo{ font-family:var(--mono); }
+  footer a{text-decoration:none;color:var(--paper-dim);border-bottom:1px dotted var(--line);}
+  footer a:hover{color:var(--amber);border-color:var(--amber);}
 
   @media (max-width:640px){
-    .stats{ grid-template-columns:repeat(2,1fr); }
-    .topbar{ padding:12px 16px; }
-    .hero, .stats, .curriculum{ padding:0 16px; }
+    .stat-strip{grid-template-columns:repeat(2,1fr);}
+    .reel-meta{display:none;}
   }
 
-  :focus-visible{ outline:2px solid var(--gold); outline-offset:2px; }
+  @media (prefers-reduced-motion:reduce){
+    *{animation:none !important;transition:none !important;}
+  }
 </style>
 </head>
 <body>
 
-<div class="topbar">
-  <div class="brand">
-    <span class="dot"></span>
-    <div>EM TÂM LÀM ADS<small>Khu vực học viên</small></div>
-  </div>
-  <div class="badge">✓ Đã mở khoá toàn bộ</div>
-</div>
+<header class="topbar">
+  <div class="brand"><span class="dot"></span>Em Tâm Làm Ads</div>
+  <span class="badge">✓ ĐÃ MỞ KHOÁ TOÀN BỘ</span>
+</header>
 
-<div class="scrubber-wrap">
-  <div class="scrubber" id="scrubber"></div>
-</div>
+<section class="hero-wrap">
+  <p class="kicker">Khu vực học viên</p>
+  <h1>Chụp Ảnh &amp; Quay Dựng Video Bằng Điện Thoại</h1>
+  <p class="sub">Chào mừng bạn quay lại! Toàn bộ 44 bài giảng đã được mở khoá — học theo đúng thứ tự từng phần để đạt hiệu quả tốt nhất.</p>
 
-<main class="hero">
-  <div class="player-frame">
-    <div class="chrome-top">
-      <span class="rec"><span class="dot"></span>ĐANG PHÁT</span>
-      <span id="player-timecode">P1 · B01</span>
+  <div class="viewfinder" id="viewfinder">
+    <div class="vf-grid"></div>
+    <span class="vf-corner tl"></span>
+    <span class="vf-corner tr"></span>
+    <span class="vf-corner bl"></span>
+    <span class="vf-corner br"></span>
+
+    <div class="vf-hud-top">
+      <span class="rec"><span class="rdot"></span>ĐANG PHÁT</span>
+      <span id="hud-timecode">BÀI 01 / 44 · 02:02</span>
     </div>
-    <span class="corner tl"></span><span class="corner tr"></span>
-    <span class="corner bl"></span><span class="corner br"></span>
-    <iframe id="player" src="https://www.youtube.com/embed/990wKc7Xh3M?rel=0" allowfullscreen title="Video bài học"></iframe>
+
+    <div class="vf-media">
+      <iframe src="https://www.youtube.com/embed/990wKc7Xh3M?rel=0" title="Bài 1" allowfullscreen loading="lazy"></iframe>
+    </div>
+
+    <div class="vf-hud-bottom">
+      <p class="now-playing"><span class="tag">PHẦN 1 · BÀI 1</span>Vì sao điện thoại có thể kiếm được tiền?</p>
+      <div class="hud-stats">
+        <span class="chip"><b>7</b> phần</span>
+        <span class="chip"><b>44</b> bài giảng</span>
+        <span class="chip"><b>3h26p</b> thời lượng</span>
+        <span class="chip"><b>∞</b> xem lại</span>
+      </div>
+    </div>
   </div>
-  <div class="now-playing">
-    <div class="meta" id="player-meta">Phần 1 · Bài 01 · 02:02</div>
-    <h1 id="player-title">Vì sao điện thoại có thể kiếm được tiền?</h1>
+</section>
+
+<main class="curriculum">
+  <div class="curriculum-head">
+    <h2>📚 Toàn bộ nội dung khoá học</h2>
+    <span class="count">44 bài · 7 phần</span>
   </div>
+  <div id="reels"></div>
 </main>
 
-<section class="stats">
-  <div class="stat"><div class="n">7</div><div class="l">Phần học</div></div>
-  <div class="stat"><div class="n">44</div><div class="l">Bài giảng</div></div>
-  <div class="stat"><div class="n">3h26p</div><div class="l">Thời lượng</div></div>
-  <div class="stat"><div class="n">∞</div><div class="l">Xem lại mãi mãi</div></div>
-</section>
-
-<section class="curriculum">
-  <h2>📚 Toàn bộ nội dung khoá học</h2>
-  <div id="parts-container"></div>
-</section>
-
 <footer>
-  © 2024 Em Tâm Làm Ads · <a href="https://emtamlamads.com/khoahocvideo">Trang khoá học</a> · <a href="https://emtamlamads.com/">Trang chủ</a>
-  <div style="margin-top:8px;">
-    Hỗ trợ: <a href="https://www.facebook.com/profile.php?id=61590304574447">Facebook Em Tâm</a> ·
-    <span class="zalo">Zalo: 0965 817 021</span>
-  </div>
+  <span>© 2024 Em Tâm Làm Ads</span>
+  <span><a href="https://emtamlamads.com/khoahocvideo">Trang khoá học</a> · <a href="https://emtamlamads.com/">Trang chủ</a></span>
+  <span>Hỗ trợ: <a href="https://www.facebook.com/profile.php?id=61590304574447">Facebook Em Tâm</a> · Zalo: 0965 817 021</span>
 </footer>
 
 <script>
-/* ================================================================
-   DỮ LIỆU KHOÁ HỌC — sửa ở đây để thêm tiêu đề & link cho từng bài.
-   - "url": dán link nhúng video (ví dụ link YouTube embed) vào đây.
-     Để trống "" nếu bài đó chưa có link — hệ thống sẽ tự hiện
-     trạng thái "Chưa có link".
-   - "title": tên bài học.
-   - "dur": thời lượng, định dạng mm:ss.
-   Tổng cộng hiện có 7 phần / 44 bài, đúng như trong khu vực học viên.
-   ================================================================ */
-const PARTS = [
-  { title: "Nhập môn & Tư duy kiếm tiền bằng điện thoại", lessons: [
-    "Chúng ta luôn bắt đầu từ sự thiếu tự tin",
-    "Các mô hình kiếm tiền phổ biến từ video điện thoại",
-    "Xác định phong cách nội dung phù hợp với bạn",
-    "Sai lầm 1: Chê thiết bị",
-    "Sai lầm 2: Không canh được bố cục",
-    "Các app hỗ trợ chụp ảnh, quay video cần có",
-    "Lộ trình học tập trong khoá học này",
-  ]},
-  { title: "Làm chủ camera điện thoại", lessons: [
-    "Tìm hiểu giao diện camera điện thoại",
-    "Thông số quan trọng: ISO, tốc độ màn trập, cân bằng trắng",
-    "Lấy nét và đo sáng thủ công",
-    "Chụp ảnh chân dung bằng điện thoại",
-    "Chụp ảnh sản phẩm, đồ ăn",
-    "Các lỗi thường gặp khi chụp và cách khắc phục",
-  ]},
-  { title: "Bố cục & ánh sáng khi quay chụp", lessons: [
-    "Nguyên tắc bố cục một phần ba",
-    "Các góc quay tạo chiều sâu cho video",
-    "Tận dụng ánh sáng tự nhiên",
-    "Ánh sáng nhân tạo cơ bản cho người mới",
-    "Phối màu và không gian quay",
-    "Thực hành bố cục qua các tình huống thực tế",
-  ]},
-  { title: "Kỹ thuật quay video chuyên nghiệp", lessons: [
-    "Các cỡ cảnh cơ bản trong quay video",
-    "Kỹ thuật lia máy, di chuyển mượt mà",
-    "Quay chuyển động chậm, tua nhanh thời gian",
-    "Ghi âm thanh chất lượng khi quay bằng điện thoại",
-    "Quay nhiều cảnh cho một kịch bản hoàn chỉnh",
-    "Kỹ thuật quay phỏng vấn, chia sẻ trước máy",
-  ]},
-  { title: "Dựng video cơ bản trên điện thoại", lessons: [
-    "Làm quen ứng dụng dựng video trên điện thoại",
-    "Cắt ghép và sắp xếp cảnh quay",
-    "Thêm nhạc nền và hiệu ứng âm thanh",
-    "Thêm chữ, tiêu đề cho video",
-    "Các kiểu chuyển cảnh cơ bản",
-    "Xuất video đúng chuẩn cho từng nền tảng",
-  ]},
-  { title: "Dựng video nâng cao & hiệu ứng", lessons: [
-    "Chỉnh màu video chuyên nghiệp",
-    "Hiệu ứng chuyển động và keyframe",
-    "Lồng tiếng và đồng bộ âm thanh",
-    "Tạo template dựng video để tái sử dụng",
-    "Dựng video theo hướng kể chuyện (storytelling)",
-    "Mẹo tối ưu tốc độ khi dựng video",
-  ]},
-  { title: "Xuất bản, tối ưu & kiếm tiền", lessons: [
-    "Tối ưu tiêu đề, mô tả và thẻ cho video",
-    "Chọn nền tảng đăng phù hợp với nội dung",
-    "Thời điểm đăng bài hiệu quả nhất",
-    "Xây dựng kênh và giữ chân người xem",
-    "Kết nối với nhãn hàng để nhận hợp đồng",
-    "Các hình thức kiếm tiền từ nền tảng",
-    "Tổng kết khoá học & lộ trình phát triển tiếp theo",
-  ]},
+/* =====================================================================
+   DỮ LIỆU KHOÁ HỌC
+   -> Sửa trực tiếp trong mảng COURSE bên dưới để thêm link YouTube thật
+      và đổi tên bài học. Mỗi phần (part) có: title, meta (thời lượng),
+      và lessons: [{ title, duration, url }]
+      - Nếu chưa có "url", bài học sẽ hiện nhãn "CHƯA CÓ LINK".
+      - "Bài 1" đã có sẵn link/tiêu đề thật, các bài còn lại đang là
+        tên giữ chỗ (placeholder) — hãy đổi lại cho đúng nội dung.
+   ===================================================================== */
+const COURSE = [
+  {
+    title: "Nền tảng & tư duy kiếm tiền từ điện thoại",
+    lessons: [
+      { title: "Vì sao điện thoại có thể kiếm được tiền?", duration: "02:02", url: "https://www.youtube.com/embed/990wKc7Xh3M?rel=0" },
+      { title: "Bài 2 — thêm tiêu đề tại đây", duration: "--:--" },
+      { title: "Bài 3 — thêm tiêu đề tại đây", duration: "--:--" },
+      { title: "Bài 4 — thêm tiêu đề tại đây", duration: "--:--" },
+      { title: "Bài 5 — thêm tiêu đề tại đây", duration: "--:--" },
+      { title: "Bài 6 — thêm tiêu đề tại đây", duration: "--:--" },
+    ]
+  },
+  {
+    title: "Làm chủ camera điện thoại",
+    lessons: [
+      { title: "Bài 7 — thêm tiêu đề tại đây", duration: "--:--" },
+      { title: "Bài 8 — thêm tiêu đề tại đây", duration: "--:--" },
+      { title: "Bài 9 — thêm tiêu đề tại đây", duration: "--:--" },
+      { title: "Bài 10 — thêm tiêu đề tại đây", duration: "--:--" },
+      { title: "Bài 11 — thêm tiêu đề tại đây", duration: "--:--" },
+      { title: "Bài 12 — thêm tiêu đề tại đây", duration: "--:--" },
+    ]
+  },
+  {
+    title: "Bố cục & ánh sáng",
+    lessons: [
+      { title: "Bài 13 — thêm tiêu đề tại đây", duration: "--:--" },
+      { title: "Bài 14 — thêm tiêu đề tại đây", duration: "--:--" },
+      { title: "Bài 15 — thêm tiêu đề tại đây", duration: "--:--" },
+      { title: "Bài 16 — thêm tiêu đề tại đây", duration: "--:--" },
+      { title: "Bài 17 — thêm tiêu đề tại đây", duration: "--:--" },
+      { title: "Bài 18 — thêm tiêu đề tại đây", duration: "--:--" },
+      { title: "Bài 19 — thêm tiêu đề tại đây", duration: "--:--" },
+    ]
+  },
+  {
+    title: "Quay dựng video cơ bản",
+    lessons: [
+      { title: "Bài 20 — thêm tiêu đề tại đây", duration: "--:--" },
+      { title: "Bài 21 — thêm tiêu đề tại đây", duration: "--:--" },
+      { title: "Bài 22 — thêm tiêu đề tại đây", duration: "--:--" },
+      { title: "Bài 23 — thêm tiêu đề tại đây", duration: "--:--" },
+      { title: "Bài 24 — thêm tiêu đề tại đây", duration: "--:--" },
+      { title: "Bài 25 — thêm tiêu đề tại đây", duration: "--:--" },
+    ]
+  },
+  {
+    title: "Dựng video nâng cao trên điện thoại",
+    lessons: [
+      { title: "Bài 26 — thêm tiêu đề tại đây", duration: "--:--" },
+      { title: "Bài 27 — thêm tiêu đề tại đây", duration: "--:--" },
+      { title: "Bài 28 — thêm tiêu đề tại đây", duration: "--:--" },
+      { title: "Bài 29 — thêm tiêu đề tại đây", duration: "--:--" },
+      { title: "Bài 30 — thêm tiêu đề tại đây", duration: "--:--" },
+      { title: "Bài 31 — thêm tiêu đề tại đây", duration: "--:--" },
+    ]
+  },
+  {
+    title: "Nội dung cho quảng cáo (ads)",
+    lessons: [
+      { title: "Bài 32 — thêm tiêu đề tại đây", duration: "--:--" },
+      { title: "Bài 33 — thêm tiêu đề tại đây", duration: "--:--" },
+      { title: "Bài 34 — thêm tiêu đề tại đây", duration: "--:--" },
+      { title: "Bài 35 — thêm tiêu đề tại đây", duration: "--:--" },
+      { title: "Bài 36 — thêm tiêu đề tại đây", duration: "--:--" },
+      { title: "Bài 37 — thêm tiêu đề tại đây", duration: "--:--" },
+    ]
+  },
+  {
+    title: "Nhận việc & kiếm tiền thực tế",
+    lessons: [
+      { title: "Bài 38 — thêm tiêu đề tại đây", duration: "--:--" },
+      { title: "Bài 39 — thêm tiêu đề tại đây", duration: "--:--" },
+      { title: "Bài 40 — thêm tiêu đề tại đây", duration: "--:--" },
+      { title: "Bài 41 — thêm tiêu đề tại đây", duration: "--:--" },
+      { title: "Bài 42 — thêm tiêu đề tại đây", duration: "--:--" },
+      { title: "Bài 43 — thêm tiêu đề tại đây", duration: "--:--" },
+      { title: "Bài 44 — thêm tiêu đề tại đây", duration: "--:--" },
+    ]
+  },
 ];
 
-/* ================================================================
-   DÁN LINK VÀO ĐÂY — chỉ việc này thôi!
-   Mỗi dòng ứng với đúng 1 bài học, theo thứ tự Phần 1 → Phần 7
-   (dòng comment bên phải ghi rõ đó là bài nào để bạn khỏi đếm).
-   - Dán link nhúng (embed link) vào giữa hai dấu ngoặc kép "".
-   - Bài nào chưa có link thì cứ để trống "" — sẽ tự hiện khoá 🔒.
-   - (Tuỳ chọn) muốn thêm thời lượng thì sửa DURATIONS bên dưới,
-     cùng thứ tự, ví dụ "05:30". Không bắt buộc.
-   ================================================================ */
-const LINKS = [
-  "https://www.youtube.com/embed/nXKFDh5f0VA?rel=0", // Phần 1 - Bài 01
-  "https://www.youtube.com/embed/nXKFDh5f0VA?rel=0", // Phần 1 - Bài 02 (link thử)
-  "", // Phần 1 - Bài 03
-  "https://www.youtube.com/embed/kjvPwI93g8k?rel=0", // Phần 1 - Bài 04
-  "https://www.youtube.com/embed/vPI_BHV9LIQ?rel=0", // Phần 1 - Bài 05
-  "", // Phần 1 - Bài 06
-  "", // Phần 1 - Bài 07
-  "", // Phần 2 - Bài 01
-  "", // Phần 2 - Bài 02
-  "", // Phần 2 - Bài 03
-  "", // Phần 2 - Bài 04
-  "", // Phần 2 - Bài 05
-  "", // Phần 2 - Bài 06
-  "", // Phần 3 - Bài 01
-  "", // Phần 3 - Bài 02
-  "", // Phần 3 - Bài 03
-  "", // Phần 3 - Bài 04
-  "", // Phần 3 - Bài 05
-  "", // Phần 3 - Bài 06
-  "", // Phần 4 - Bài 01
-  "", // Phần 4 - Bài 02
-  "", // Phần 4 - Bài 03
-  "", // Phần 4 - Bài 04
-  "", // Phần 4 - Bài 05
-  "", // Phần 4 - Bài 06
-  "", // Phần 5 - Bài 01
-  "", // Phần 5 - Bài 02
-  "", // Phần 5 - Bài 03
-  "", // Phần 5 - Bài 04
-  "", // Phần 5 - Bài 05
-  "", // Phần 5 - Bài 06
-  "", // Phần 6 - Bài 01
-  "", // Phần 6 - Bài 02
-  "", // Phần 6 - Bài 03
-  "", // Phần 6 - Bài 04
-  "", // Phần 6 - Bài 05
-  "", // Phần 6 - Bài 06
-  "", // Phần 7 - Bài 01
-  "", // Phần 7 - Bài 02
-  "", // Phần 7 - Bài 03
-  "", // Phần 7 - Bài 04
-  "", // Phần 7 - Bài 05
-  "", // Phần 7 - Bài 06
-  "", // Phần 7 - Bài 07
-];
+function renderCourse(){
+  const wrap = document.getElementById('reels');
+  let lessonCounter = 0;
+  const frag = document.createDocumentFragment();
 
-const DURATIONS = [
-  // dán thời lượng vào đây theo đúng thứ tự nếu bạn có, ví dụ: "05:30",
-]; // để trống mảng này nếu chưa có thời lượng — hệ thống sẽ tự hiện "--:--"
+  COURSE.forEach((part, pIdx) => {
+    const reel = document.createElement('div');
+    reel.className = 'reel';
+    reel.style.animationDelay = (pIdx * 0.06) + 's';
 
-/* gộp LINKS + DURATIONS vào đúng từng bài theo thứ tự ở trên */
-(function attachLinks(){
-  let i = 0;
-  PARTS.forEach(part=>{
-    part.lessons = part.lessons.map(title=>{
-      const lesson = { title, url: LINKS[i] || "", dur: DURATIONS[i] || "" };
-      i++;
-      return lesson;
+    const head = document.createElement('div');
+    head.className = 'reel-head';
+    head.innerHTML = `
+      <span class="reel-num">PHẦN ${String(pIdx+1).padStart(2,'0')}</span>
+      <span class="reel-title">${part.title}</span>
+      <span class="reel-meta">${part.lessons.length} bài</span>
+    `;
+    reel.appendChild(head);
+
+    part.lessons.forEach(lesson => {
+      lessonCounter++;
+      const row = document.createElement('div');
+      row.className = 'lesson';
+      const num = String(lessonCounter).padStart(3,'0');
+      const titleHtml = lesson.url
+        ? `<a href="${lesson.url}" target="_blank" rel="noopener">${lesson.title}</a>`
+        : `<span>${lesson.title}</span>`;
+      row.innerHTML = `
+        <span class="lesson-num">${num}</span>
+        <span class="lesson-play">▶</span>
+        <span class="lesson-title">${titleHtml}</span>
+        <span class="lesson-dur">${lesson.duration}</span>
+        ${lesson.url ? '' : '<span class="pending">CHƯA CÓ LINK</span>'}
+      `;
+      reel.appendChild(row);
     });
-  });
-})();
 
-const scrubberEl = document.getElementById("scrubber");
-const partsEl = document.getElementById("parts-container");
-
-function pad(n){ return String(n).padStart(2,"0"); }
-
-/* build scrubber */
-PARTS.forEach((part, i)=>{
-  const seg = document.createElement("button");
-  seg.className = "seg" + (i===0 ? " active" : "");
-  seg.style.flexGrow = part.lessons.length;
-  seg.innerHTML = `<div class="p">Phần ${i+1}</div><div class="c">${part.lessons.length} bài</div>`;
-  seg.addEventListener("click", ()=> openPart(i, true));
-  scrubberEl.appendChild(seg);
-});
-const playhead = document.createElement("div");
-playhead.className = "playhead";
-scrubberEl.appendChild(playhead);
-
-function updatePlayhead(i){
-  const seg = scrubberEl.children[i];
-  document.querySelectorAll(".seg").forEach(s=>s.classList.remove("active"));
-  seg.classList.add("active");
-  playhead.style.left = (seg.offsetLeft + seg.offsetWidth/2 - 6) + "px";
-}
-
-/* build curriculum */
-PARTS.forEach((part, pi)=>{
-  const wrap = document.createElement("div");
-  wrap.className = "part" + (pi===0 ? " open" : "");
-  wrap.id = "part-" + pi;
-
-  const head = document.createElement("div");
-  head.className = "part-head";
-  head.innerHTML = `
-    <div class="left">
-      <span class="tag">PHẦN ${pad(pi+1)}</span>
-      <h3>${part.title}</h3>
-    </div>
-    <div class="left">
-      <span class="count">${part.lessons.length} bài</span>
-      <span class="chev">▾</span>
-    </div>`;
-  head.addEventListener("click", ()=> wrap.classList.toggle("open"));
-  wrap.appendChild(head);
-
-  const lessonsEl = document.createElement("div");
-  lessonsEl.className = "lessons";
-
-  part.lessons.forEach((lesson, li)=>{
-    const row = document.createElement("div");
-    const hasLink = !!lesson.url;
-    row.className = "lesson" + (hasLink ? " has-link" : "");
-    row.innerHTML = `
-      <span class="code">${pad(li+1)}</span>
-      <span class="title ${lesson.title ? "" : "empty"}">${lesson.title || "Chưa thêm tiêu đề"}</span>
-      <span class="dur">${lesson.dur || "--:--"}</span>
-      <span class="icon">${hasLink ? "▶" : "🔒"}</span>`;
-    row.addEventListener("click", ()=>{
-      if(!hasLink) return;
-      document.getElementById("player").src = lesson.url;
-      document.getElementById("player-title").textContent = lesson.title || `Bài ${pad(li+1)}`;
-      document.getElementById("player-meta").textContent = `Phần ${pi+1} · Bài ${pad(li+1)} · ${lesson.dur || "--:--"}`;
-      document.getElementById("player-timecode").textContent = `P${pi+1} · B${pad(li+1)}`;
-      window.scrollTo({ top:0, behavior:"smooth" });
-      openPart(pi, false);
-    });
-    lessonsEl.appendChild(row);
+    frag.appendChild(reel);
   });
 
-  wrap.appendChild(lessonsEl);
-  partsEl.appendChild(wrap);
-});
-
-function openPart(i, scroll){
-  document.querySelectorAll(".part").forEach(p=>p.classList.remove("open"));
-  const target = document.getElementById("part-"+i);
-  target.classList.add("open");
-  updatePlayhead(i);
-  if(scroll) target.scrollIntoView({ behavior:"smooth", block:"start" });
+  wrap.appendChild(frag);
 }
 
-window.addEventListener("load", ()=> updatePlayhead(0));
-window.addEventListener("resize", ()=> {
-  const activeIdx = [...scrubberEl.children].findIndex(s=>s.classList && s.classList.contains("active"));
-  if(activeIdx >= 0) updatePlayhead(activeIdx);
-});
+renderCourse();
 </script>
-
 </body>
 </html>
