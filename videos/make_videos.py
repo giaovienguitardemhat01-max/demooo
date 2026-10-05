@@ -30,7 +30,7 @@ DURATION = 6.0
 Q = 3  # các lớp hiệu ứng (hơi nước, ánh sáng, gợn nước) tính ở độ phân giải 1/Q
 
 
-# Mọi toạ độ tính theo pixel của ảnh gốc 1122x1402.
+# Mọi toạ độ tính theo pixel của ảnh gốc (1122x1402 nếu không ghi chú khác).
 #   cam:    (zoom, tâm x, tâm y, xoay độ) ở đầu và cuối clip
 #   steam:  (cx, cy, rx, ry, độ cao bốc lên, cường độ) - vùng mặt nước dùng
 #   liquid: (cx, cy, rx, ry) - vùng chất lỏng gợn sóng
@@ -91,6 +91,33 @@ SCENES = [
         "sway": [(150, 700, 170, 140)],
         "steam_gain": 0.85,
         "light_amp": 0.05,
+    },
+    {
+        "name": "06-bun-cha",  # ảnh 1086x1448
+        "cam": [(1.0, 543, 700, 0.0), (1.06, 560, 800, 0.0)],
+        "steam": [(425, 900, 300, 300, 250, 0.8)],
+        "liquid": [(425, 925, 320, 310)],
+        "sway": [(360, 360, 400, 220), (640, 500, 120, 110)],
+        "steam_gain": 0.75,
+        "light_amp": 0.05,
+    },
+    {
+        "name": "07-cha-nuong",
+        "cam": [(1.0, 561, 701, 0.0), (1.15, 560, 775, -1.0)],
+        "steam": [(300, 880, 260, 220, 280, 0.8), (800, 950, 260, 220, 280, 0.8)],
+        "liquid": [(112, 52, 100, 45)],
+        "sway": [(580, 360, 560, 290), (950, 680, 130, 120)],
+        "steam_gain": 0.75,
+        "light_amp": 0.05,
+    },
+    {
+        "name": "08-bun-thang",  # ảnh 1122x1496 (chuyển từ HEIC)
+        "cam": [(1.0, 561, 720, 0.0), (1.12, 578, 640, 0.0)],
+        "steam": [(580, 600, 400, 340, 330, 1.0)],
+        "liquid": [(580, 625, 410, 360)],
+        "sway": [],
+        "steam_gain": 0.8,
+        "light_amp": 0.04,
     },
 ]
 
@@ -294,12 +321,12 @@ def montage(paths, out):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--preview", metavar="DIR", help="chỉ xuất vài khung hình PNG vào thư mục này")
-    ap.add_argument("--only", help="chỉ xử lý ảnh có tên này (vd 01-ga)")
+    ap.add_argument("--only", nargs="+", help="chỉ xử lý các ảnh có tên này (vd 01-ga 06-bun-cha)")
     args = ap.parse_args()
 
     noise = Noise()
     out_dir = HERE
-    scenes = [c for c in SCENES if not args.only or c["name"] == args.only]
+    scenes = [c for c in SCENES if not args.only or c["name"] in args.only]
     for cfg in scenes:
         scene = Scene(cfg, noise)
         scene.check_bounds()
