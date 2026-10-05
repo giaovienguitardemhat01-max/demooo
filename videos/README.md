@@ -12,6 +12,7 @@
 | `06-bun-cha.mp4` | Bún chả, máy quay hạ dần xuống bát |
 | `07-cha-nuong.mp4` | Chả nướng và rau sống, đẩy máy vào và xoay nhẹ |
 | `08-bun-thang.mp4` | Bún thang, đẩy máy vào gần (ảnh gốc HEIC đã chuyển sang sRGB) |
+| `09-quan-dong-khach.mp4` | Ảnh camera trong quán: khách cử động kiểu tua nhanh, đèn tre đung đưa, máy quay tiến vào (1280x720, 8 giây, dựng bằng `make_quan_dong.py`) |
 | `tong-hop.mp4` | Ghép cả 5 clip, chuyển cảnh mờ dần (27,6 giây) |
 
 Hiệu ứng: máy quay chuyển động chậm, hơi nóng bốc lên từ bát, nước dùng gợn nhẹ, rau lay nhẹ, ánh nắng thay đổi nhẹ.
