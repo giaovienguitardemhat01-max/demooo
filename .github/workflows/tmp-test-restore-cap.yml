@@ -10,7 +10,7 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
-      - name: Create unbounded shadow storage + one shadow copy on C:
+      - name: 'Create unbounded shadow storage and one shadow copy on drive C'
         shell: powershell
         run: |
           vssadmin add shadowstorage /for=C: /on=C: /maxsize=UNBOUNDED
