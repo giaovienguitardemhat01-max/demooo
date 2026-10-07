@@ -1,0 +1,41 @@
+# TEMPORARY: verifies the System Restore cap path on a real Windows runner. Will be removed.
+name: tmp-test-restore-cap
+on:
+  push:
+    branches: [claude/serene-newton-rsaq74]
+    paths: ['windows-c-drive-scan/**', '.github/workflows/tmp-test-restore-cap.yml']
+jobs:
+  restore:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create unbounded shadow storage + one shadow copy on C:
+        shell: powershell
+        run: |
+          vssadmin add shadowstorage /for=C: /on=C: /maxsize=UNBOUNDED
+          vssadmin create shadow /for=C:
+          vssadmin list shadowstorage
+          (Get-CimInstance Win32_ShadowCopy | Measure-Object).Count
+      - name: Run automatic cleanup
+        shell: powershell
+        run: |
+          $ProgressPreference = 'SilentlyContinue'
+          & .\windows-c-drive-scan\TuDongDonO-C.ps1 -ThuMucBaoCao (Join-Path $env:RUNNER_TEMP 'auto') -KhongMoNotepad -BoQuaDonDism
+      - name: Verify System Restore cap
+        shell: powershell
+        run: |
+          vssadmin list shadowstorage
+          $vol = Get-CimInstance Win32_Volume -Filter "DriveLetter='C:'"
+          $ss = Get-CimInstance Win32_ShadowStorage | Where-Object { $_.Volume.DeviceID -eq $vol.DeviceID }
+          $cap = [double]$vol.Capacity
+          $target = [Math]::Min([Math]::Max(0.08 * $cap, 5GB), 15GB)
+          $copies = @(Get-CimInstance Win32_ShadowCopy | Where-Object { $_.VolumeName -eq $vol.DeviceID }).Count
+          "MaxSpace = {0:N0}  target = {1:N0}  shadow copies on C: = {2}" -f [double]$ss.MaxSpace, $target, $copies
+          $fail = @()
+          if (-not $ss) { $fail += 'shadow storage disappeared' }
+          elseif ([Math]::Abs([double]$ss.MaxSpace - $target) -gt 64MB) { $fail += 'MaxSpace not capped to target' }
+          if ($copies -lt 1) { $fail += 'EXISTING SHADOW COPY WAS DELETED' }
+          $res = Get-ChildItem (Join-Path $env:RUNNER_TEMP 'auto') -Recurse -Filter 'KetQua.txt' | Select-Object -First 1
+          if ($res) { Get-Content $res.FullName -Encoding UTF8 -TotalCount 9 } else { $fail += 'no KetQua.txt' }
+          if ($fail.Count) { '===== FAILURES ====='; $fail; exit 1 } else { '===== RESTORE CAP CHECKS PASSED =====' }

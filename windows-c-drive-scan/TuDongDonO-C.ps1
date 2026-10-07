@@ -774,7 +774,9 @@ foreach ($c in ($causes | Select-Object -First 12)) {
 }
 
 $normalChurn = '\\System32\\config|\\winevt\\|\\Windows Defender\\|\\Prefetch|\\SoftwareDistribution\\DataStore|\\catroot2'
-$growth = @($before.Dirs | Where-Object { $_.PSObject.Properties['OwnRecentBytes'] -and [double]$_.OwnRecentBytes -ge 300MB -and $_.Path -notmatch $normalChurn } |
+# Bỏ qua gốc ổ và các thư mục quá chung chung (không chỉ ra được ứng dụng cụ thể)
+$broadDirs = @('C:', 'C:\Windows', 'C:\Users', 'C:\Program Files', 'C:\Program Files (x86)', 'C:\ProgramData')
+$growth = @($before.Dirs | Where-Object { $_.PSObject.Properties['OwnRecentBytes'] -and [double]$_.OwnRecentBytes -ge 300MB -and $_.Path -notmatch $normalChurn -and $broadDirs -notcontains $_.Path -and $_.Path -notmatch '^C:\\Users\\[^\\]+$' } |
     Sort-Object { [double]$_.OwnRecentBytes } -Descending | Select-Object -First 6)
 if ($growth.Count -gt 0) {
     Write-Info 'Nơi đang được ghi thêm nhiều dữ liệu nhất (7 ngày qua):' 'White'
