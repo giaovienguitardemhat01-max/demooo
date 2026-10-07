@@ -198,6 +198,7 @@ namespace CDriveScan
         // Hard link (vd WinSxS <-> System32): chi tinh 1 lan, cho duong dan gap dau tien.
         public bool DedupHardLinks = true;
         public long HardLinkMinBytes = 32L * 1024;
+        public long OnDiskCheckMinBytes = 32L * 1024;
 
         public HashSet<string> Targets = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         public HashSet<string> SpecialExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -389,8 +390,10 @@ namespace CDriveScan
                         continue;
                     }
 
+                    // Kich thuoc thuc tren dia: file nen NTFS, sparse va nen WOF/CompactOS (Windows an co
+                    // WOF khi liet ke thu muc nen file >= OnDiskCheckMinBytes luon duoc hoi truc tiep).
                     long size = logical;
-                    if ((attr & (ATTR_COMPRESSED | ATTR_SPARSE)) != 0 || (isReparse && fd.dwReserved0 == TAG_WOF))
+                    if ((attr & (ATTR_COMPRESSED | ATTR_SPARSE)) != 0 || (isReparse && fd.dwReserved0 == TAG_WOF) || logical >= OnDiskCheckMinBytes)
                     {
                         uint hi;
                         uint lo = GetCompressedFileSizeW(@"\\?\" + full, out hi);
@@ -1567,7 +1570,7 @@ Out-Line ('  Thu muc khong truy cap duoc   : {0:N0}' -f $walker.DeniedDirs)
 foreach ($s in ($walker.DeniedSamples | Select-Object -First 8)) { Out-Line ('     {0}' -f $s) }
 Out-Line ('  Junction/symlink da bo qua    : {0:N0} (tranh dem trung)' -f $walker.SkippedLinks)
 Out-Line ('  File chi tren cloud (OneDrive): {0:N0} file, {1} - KHONG chiem cho o C, khong tinh vao tong' -f $walker.PlaceholderFiles, (Format-Size $walker.PlaceholderBytes))
-Out-Line ('  Tiet kiem nho nen NTFS/CompactOS/sparse: {0}' -f (Format-Size $walker.CompressedSavedBytes))
+Out-Line ('  Tiet kiem nho nen NTFS/WOF/CompactOS/sparse: {0} (da tinh theo dung luong thuc tren dia)' -f (Format-Size $walker.CompressedSavedBytes))
 Out-Line ('  Hard link trung (chi tinh 1 lan)        : {0:N0} file, {1} (khong mo duoc de kiem tra: {2:N0} file)' -f $walker.HardLinkDupFiles, (Format-Size $walker.HardLinkDupBytes), $walker.HardLinkOpenFailures)
 if ($walker.Error) { Out-Line ('  [!] Loi bo quet: {0}' -f $walker.Error) }
 Out-Line ''
