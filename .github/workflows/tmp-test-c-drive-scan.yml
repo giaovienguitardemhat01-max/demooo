@@ -1,0 +1,26 @@
+# TEMPORARY: verifies windows-c-drive-scan on a real Windows runner. Will be removed.
+name: tmp-test-c-drive-scan
+on:
+  push:
+    branches: [claude/serene-newton-rsaq74]
+    paths: ['windows-c-drive-scan/**', '.github/workflows/tmp-test-c-drive-scan.yml']
+jobs:
+  scan:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run scan with Windows PowerShell 5.1 (admin)
+        shell: powershell
+        run: |
+          $ProgressPreference = 'SilentlyContinue'
+          $PSVersionTable.PSVersion.ToString()
+          [Environment]::Is64BitProcess
+          $out = Join-Path $env:RUNNER_TEMP 'scan'
+          $sw = [Diagnostics.Stopwatch]::StartNew()
+          & .\windows-c-drive-scan\Scan-CDrive.ps1 -OutputDir $out
+          "ELAPSED: $($sw.Elapsed)"
+          Get-ChildItem $out -Recurse | Select-Object FullName, Length | Format-Table -AutoSize | Out-String -Width 300
+          $rep = Get-ChildItem $out -Recurse -Filter 'BaoCao-TomTat.txt' | Select-Object -First 1
+          if (-not $rep) { throw 'no report produced' }
+          Get-Content $rep.FullName
