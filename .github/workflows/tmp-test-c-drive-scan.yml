@@ -24,3 +24,6 @@ jobs:
           $rep = Get-ChildItem $out -Recurse -Filter 'BaoCao-TomTat.txt' | Select-Object -First 1
           if (-not $rep) { throw 'no report produced' }
           Get-Content $rep.FullName
+          '======== HEAD AGAIN ========'
+          Get-Content $rep.FullName -TotalCount 40
+          "ELAPSED: $($sw.Elapsed)"

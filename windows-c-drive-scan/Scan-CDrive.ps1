@@ -146,6 +146,30 @@ namespace CDriveScan
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
         private static extern uint GetCompressedFileSizeW(string lpFileName, out uint lpFileSizeHigh);
 
+        [StructLayout(LayoutKind.Sequential)]
+        private struct BY_HANDLE_FILE_INFORMATION
+        {
+            public uint FileAttributes;
+            public FILETIME_U CreationTime;
+            public FILETIME_U LastAccessTime;
+            public FILETIME_U LastWriteTime;
+            public uint VolumeSerialNumber;
+            public uint FileSizeHigh;
+            public uint FileSizeLow;
+            public uint NumberOfLinks;
+            public uint FileIndexHigh;
+            public uint FileIndexLow;
+        }
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        private static extern IntPtr CreateFileW(string lpFileName, uint dwDesiredAccess, uint dwShareMode, IntPtr lpSecurityAttributes, uint dwCreationDisposition, uint dwFlagsAndAttributes, IntPtr hTemplateFile);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool GetFileInformationByHandle(IntPtr hFile, out BY_HANDLE_FILE_INFORMATION lpFileInformation);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool CloseHandle(IntPtr hObject);
+
         private static readonly IntPtr INVALID_HANDLE = new IntPtr(-1);
         private const int FIND_EX_INFO_BASIC = 1;
         private const int FIND_FIRST_EX_LARGE_FETCH = 2;
@@ -160,12 +184,20 @@ namespace CDriveScan
         private const uint TAG_SYMLINK = 0xA000000C;
         private const uint TAG_WOF = 0x80000017;
         private const long MAX_FILETIME = 2650467743999999999L;
+        private const uint FILE_READ_ATTRIBUTES = 0x80;
+        private const uint FILE_SHARE_ALL = 0x7;
+        private const uint OPEN_EXISTING = 3;
+        private const uint FLAG_OPEN_REPARSE_POINT = 0x00200000;
+        private const uint FLAG_BACKUP_SEMANTICS = 0x02000000;
 
         public long MinRecordBytes = 100L * 1024 * 1024;
         public int TopFileCount = 50;
         public int RecentFileCount = 30;
         public long SpecialFileMinBytes = 10L * 1024 * 1024;
         public long RecentCutoffFileTime = 0;
+        // Hard link (vd WinSxS <-> System32): chi tinh 1 lan, cho duong dan gap dau tien.
+        public bool DedupHardLinks = true;
+        public long HardLinkMinBytes = 32L * 1024;
 
         public HashSet<string> Targets = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         public HashSet<string> SpecialExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -187,10 +219,14 @@ namespace CDriveScan
         public long PlaceholderFiles;
         public long PlaceholderBytes;
         public long CompressedSavedBytes;
+        public long HardLinkDupFiles;
+        public long HardLinkDupBytes;
+        public long HardLinkOpenFailures;
         public volatile string CurrentDir = "";
         public string Error;
 
         private Thread worker;
+        private HashSet<long> seenLinks = new HashSet<long>();
         private long topThreshold = 0;
         private long recentThreshold = 0;
 
@@ -256,6 +292,31 @@ namespace CDriveScan
             f.Bytes = bytes;
             f.LastWriteUtc = DateTime.FromFileTimeUtc(fileTime);
             return f;
+        }
+
+        // true = file nay la mot ten khac (hard link) cua file da dem truoc do
+        private bool IsDuplicateHardLink(string full)
+        {
+            IntPtr fh = CreateFileW(@"\\?\" + full, FILE_READ_ATTRIBUTES, FILE_SHARE_ALL, IntPtr.Zero, OPEN_EXISTING, FLAG_OPEN_REPARSE_POINT | FLAG_BACKUP_SEMANTICS, IntPtr.Zero);
+            if (fh == INVALID_HANDLE)
+            {
+                HardLinkOpenFailures++;
+                return false;
+            }
+            try
+            {
+                BY_HANDLE_FILE_INFORMATION info;
+                if (GetFileInformationByHandle(fh, out info) && info.NumberOfLinks > 1)
+                {
+                    long id = Combine(info.FileIndexHigh, info.FileIndexLow);
+                    if (!seenLinks.Add(id)) return true;
+                }
+            }
+            finally
+            {
+                CloseHandle(fh);
+            }
+            return false;
         }
 
         private void Record(string dir, int depth, Totals t, bool denied)
@@ -342,6 +403,13 @@ namespace CDriveScan
                                 size = onDisk;
                             }
                         }
+                    }
+
+                    if (DedupHardLinks && logical >= HardLinkMinBytes && IsDuplicateHardLink(full))
+                    {
+                        HardLinkDupFiles++;
+                        HardLinkDupBytes += size;
+                        continue;
                     }
 
                     t.Bytes += size;
@@ -652,7 +720,7 @@ $catWU = 'Windows Update'
 Add-Cat $catWU 'Cache tai ban cap nhat (SoftwareDistribution\Download)' 'A' @('C:\Windows\SoftwareDistribution\Download') 'Windows tu tai lai neu can. Don bang Disk Cleanup > "Windows Update Cleanup" hoac dung dich vu wuauserv roi xoa noi dung.'
 Add-Cat $catWU 'Delivery Optimization cache' 'A' @('C:\Windows\ServiceProfiles\NetworkService\AppData\Local\Microsoft\Windows\DeliveryOptimization', 'C:\Windows\SoftwareDistribution\DeliveryOptimization') 'Ban cap nhat chia se P2P. Don trong Settings > Storage > Temporary files > Delivery Optimization Files.'
 Add-Cat $catWU 'Log CBS / DISM (C:\Windows\Logs)' 'B' @('C:\Windows\Logs') 'Log cai dat cap nhat; CBS.log co the phinh to khi update loi. Xoa .log/.cab cu khi TrustedInstaller dung.'
-Add-Cat $catWU 'Component store WinSxS (xem so lieu DISM o muc 9)' 'C' @('C:\Windows\WinSxS') 'KHONG xoa thu cong. So do o day bi dem trung do hard link voi System32. Chi don bang DISM /StartComponentCleanup.'
+Add-Cat $catWU 'Component store WinSxS (xem so lieu DISM o muc 9)' 'C' @('C:\Windows\WinSxS') 'KHONG xoa thu cong. File dung chung (hard link) voi System32 da tinh cho System32; so chinh xac xem DISM o muc 9. Chi don bang DISM /StartComponentCleanup.'
 Add-Cat $catWU 'Windows Installer cache (C:\Windows\Installer)' 'C' @('C:\Windows\Installer') 'KHONG xoa - can de go/sua/cap nhat phan mem (Office, Visual C++...).'
 Add-Cat $catWU 'Du lieu Windows Update (DataStore)' 'C' @('C:\Windows\SoftwareDistribution\DataStore') 'KHONG xoa - lich su/co so du lieu cap nhat.'
 
@@ -999,7 +1067,11 @@ $levelB = Get-LevelTotal 'B'
 $catOrder = New-Object System.Collections.Generic.List[string]
 foreach ($item in $catalog) { if (-not $catOrder.Contains($item.Cat)) { $catOrder.Add($item.Cat) } }
 $catTotals = @(foreach ($c in $catOrder) {
-        $paths = @(); foreach ($item in $catalog) { if ($item.Cat -eq $c) { $paths += $item.Found } }
+        # Chi tinh phan co the xu ly (A/B/CN); nhom chi toan muc C ("tham khao") thi tinh tong.
+        $inCat = @($catalog | Where-Object { $_.Cat -eq $c })
+        $use = @($inCat | Where-Object { $_.Level -ne 'C' })
+        if ($use.Count -eq 0) { $use = $inCat }
+        $paths = @(); foreach ($item in $use) { $paths += $item.Found }
         $sum = [double]0; $rec = [double]0
         foreach ($p in (Remove-NestedPaths $paths)) { $e = $dirIndex[$p]; if ($e) { $sum += $e.Bytes; $rec += $e.RecentBytes } }
         [pscustomobject]@{ Cat = $c; Bytes = $sum; Recent = $rec }
@@ -1151,6 +1223,8 @@ foreach ($o in ($ownList | Select-Object -First 20)) {
 Out-Section '[3] CAY THU MUC LON (cap 1: >= 100 MB; cap sau: >= 500 MB; di sau vao thu muc >= 1 GB)'
 Out-Line '  Dau * = thu muc o goc C:\ khong phai thu muc chuan cua Windows (can xem ai tao ra).'
 Out-Line ''
+$script:treeLines = 0
+$script:treeMax = 140
 function Out-Tree {
     param([string]$Path, [int]$Level)
     if (-not $children.ContainsKey($Path)) { return }
@@ -1159,19 +1233,30 @@ function Out-Tree {
     $count = 0
     foreach ($k in ($children[$Path] | Sort-Object Bytes -Descending)) {
         if ($k.Bytes -lt $min -or $count -ge 12) { break }
+        if ($script:treeLines -ge $script:treeMax) { return }
         $leaf = $k.Path.Substring($k.Path.LastIndexOf('\') + 1)
         $mark = ''
         if ($Level -eq 1 -and $standardRoot -notcontains $leaf) { $mark = ' *' }
+        # Gop chuoi thu muc chi co 1 thu muc con chiem gan het dung luong (vd a\b\c)
+        $node = $k
+        while ($children.ContainsKey($node.Path)) {
+            $kidList = $children[$node.Path]
+            if ($kidList.Count -ne 1 -or $kidList[0].Bytes -lt 0.9 * $node.Bytes) { break }
+            $node = $kidList[0]
+            $leaf += '\' + $node.Path.Substring($node.Path.LastIndexOf('\') + 1)
+        }
         $ownTxt = ''
-        if ($children.ContainsKey($k.Path) -and $own[$k.Path] -ge 500MB) { $ownTxt = '   (tu than: {0})' -f (Format-Size $own[$k.Path]) }
+        if ($children.ContainsKey($node.Path) -and $own[$node.Path] -ge 500MB) { $ownTxt = '   (tu than: {0})' -f (Format-Size $own[$node.Path]) }
         Out-Line ('  {0,11}  {1}{2}{3}{4}' -f (Format-Size $k.Bytes), ('    ' * ($Level - 1)), $leaf, $mark, $ownTxt)
+        $script:treeLines++
         $count++
-        if ($Level -lt 10 -and $k.Bytes -ge 1GB) { Out-Tree -Path $k.Path -Level ($Level + 1) }
+        if ($Level -lt 10 -and $node.Bytes -ge 1GB) { Out-Tree -Path $node.Path -Level ($Level + 1) }
     }
 }
 if ($rootEntry) {
     Out-Line ('  {0,11}  C:\  (tong do duoc)' -f (Format-Size $rootEntry.Bytes))
     Out-Tree -Path 'C:' -Level 1
+    if ($script:treeLines -ge $script:treeMax) { Out-Line '  ... (cay da cat bot cho gon; danh sach day du trong ThuMucLon.csv)' }
     $smallRoot = @($dirs | Where-Object { $_.Depth -eq 1 -and $_.Bytes -lt 100MB })
     Out-Line ('  {0,11}  ({1} thu muc khac o goc, moi cai < 100 MB)' -f (Format-Size (($smallRoot | Measure-Object Bytes -Sum).Sum)), $smallRoot.Count)
     $deniedRoot = @($dirs | Where-Object { $_.Depth -eq 1 -and $_.Denied } | ForEach-Object { $_.Path })
@@ -1192,7 +1277,7 @@ foreach ($f in ($walker.TopFiles | Select-Object -First 20)) {
 }
 
 # ---------------------------------------------------------------- [5] Xep hang nhom
-Out-Section '[5] XEP HANG THEO NHOM NGUYEN NHAN (tong moi nhom, da loai trung lap trong nhom)'
+Out-Section '[5] XEP HANG THEO NHOM NGUYEN NHAN (phan co the xu ly A/B/CN; nhom "tham khao" la so tong)'
 $rank = @($catTotals)
 if ($pagefileBytes) { $rank += [pscustomobject]@{ Cat = 'pagefile.sys + swapfile.sys (bo nho ao)'; Bytes = $pagefileBytes + [double]$swapfileBytes; Recent = 0 } }
 if ($hiberfilBytes) { $rank += [pscustomobject]@{ Cat = 'hiberfil.sys (ngu dong / Fast Startup)'; Bytes = $hiberfilBytes; Recent = 0 } }
@@ -1280,7 +1365,12 @@ if ($crash) {
 Out-Line ('  MEMORY.DMP            : {0}' -f $(if ($memoryDmp) { '{0} ({1})' -f (Format-Size $memoryDmp.Bytes), (Format-Date $memoryDmp.LastWriteUtc.ToLocalTime()) } else { 'khong co (hoac < 10 MB)' }))
 if ($werLocalDumps -or $werLocalDumpApps.Count -gt 0) {
     $wl = @(); if ($werLocalDumps) { foreach ($k in $werLocalDumps.Keys) { $wl += ('{0}={1}' -f $k, $werLocalDumps[$k]) } }
-    Out-Line ('  [!] WER LocalDumps DANG BAT (ung dung crash se ghi dump ra dia): {0} {1}' -f ($wl -join ', '), ($werLocalDumpApps -join ', '))
+    $appTxt = ''
+    if ($werLocalDumpApps.Count -gt 0) {
+        $appTxt = 'rieng cho: ' + (($werLocalDumpApps | Select-Object -First 6) -join ', ')
+        if ($werLocalDumpApps.Count -gt 6) { $appTxt += (' ... (+{0} ung dung)' -f ($werLocalDumpApps.Count - 6)) }
+    }
+    Out-Line ('  [!] WER LocalDumps DANG BAT (ung dung crash se ghi dump ra dia): {0} {1}' -f ($wl -join ', '), $appTxt)
 } else {
     Out-Line '  WER LocalDumps        : khong cau hinh (binh thuong)'
 }
@@ -1308,7 +1398,7 @@ if ($vssText) { Out-Line '  vssadmin list shadowstorage:'; Out-Raw $vssText 25 }
 # ---------------------------------------------------------------- [9] Windows Update / DISM
 Out-Section '[9] WINDOWS UPDATE / WINSXS (DISM) / RESERVED STORAGE / COMPACTOS'
 Out-Line ('  Dang cho khoi dong lai de hoan tat cap nhat: {0}' -f $(if ($pendingReboot) { 'CO  <== nen khoi dong lai truoc khi don' } else { 'khong' }))
-Out-Line '  DISM /AnalyzeComponentStore (so lieu THAT cua WinSxS, da tru hard link):'
+Out-Line '  DISM /AnalyzeComponentStore (so lieu chinh thuc cua WinSxS):'
 if ($dismText) { Out-Raw $dismText 30 } else { Out-Line ('    {0}' -f $(if ($dismNote) { $dismNote } else { '(khong co du lieu)' })) }
 if ($dismNote -and $dismText) { Out-Line ('    {0}' -f $dismNote) }
 if ($reservedText) { Out-Line '  Reserved Storage (Windows giu san cho cap nhat):'; Out-Raw $reservedText 6 }
@@ -1364,7 +1454,7 @@ foreach ($pr in $procs) {
         if ($hrs -gt 0.05) { $rate = '{0}/gio' -f (Format-Size ([double]$pr.WriteTransferCount / $hrs)) }
     }
     $path = $pr.ExecutablePath
-    if (-not $path) { $path = '(can quyen Admin de xem duong dan)' }
+    if (-not $path) { $path = '(tien trinh he thong / khong xem duoc duong dan)' }
     Out-Line ('  {0,11}  {1,12}  {2} (PID {3})  {4}' -f (Format-Size ([double]$pr.WriteTransferCount)), $rate, $pr.Name, $pr.ProcessId, $path)
 }
 
@@ -1470,14 +1560,15 @@ Out-Line ('  Tong kich thuoc file do duoc  : {0} ({1:N0} file, {2:N0} thu muc)' 
 if ($capacity -gt 0) {
     $gap = $usedBytes - $measured
     Out-Line ('  Da dung theo Windows          : {0}  -> chenh lech {1}' -f (Format-Size $usedBytes), (Format-Size $gap))
-    Out-Line '     Chenh lech den tu: shadow copy (System Volume Information), metadata NTFS ($MFT), thu muc'
-    Out-Line '     khong truy cap duoc; nguoc lai hard link WinSxS/System32 bi dem 2 lan lam so do duoc lon hon.'
+    Out-Line '     Chenh lech den tu: shadow copy (System Volume Information), metadata NTFS ($MFT, nhat ky),'
+    Out-Line '     thu muc khong truy cap duoc, va file nho < 32 KB co hard link (khong kiem tra de quet nhanh).'
 }
 Out-Line ('  Thu muc khong truy cap duoc   : {0:N0}' -f $walker.DeniedDirs)
 foreach ($s in ($walker.DeniedSamples | Select-Object -First 8)) { Out-Line ('     {0}' -f $s) }
 Out-Line ('  Junction/symlink da bo qua    : {0:N0} (tranh dem trung)' -f $walker.SkippedLinks)
 Out-Line ('  File chi tren cloud (OneDrive): {0:N0} file, {1} - KHONG chiem cho o C, khong tinh vao tong' -f $walker.PlaceholderFiles, (Format-Size $walker.PlaceholderBytes))
 Out-Line ('  Tiet kiem nho nen NTFS/CompactOS/sparse: {0}' -f (Format-Size $walker.CompressedSavedBytes))
+Out-Line ('  Hard link trung (chi tinh 1 lan)        : {0:N0} file, {1} (khong mo duoc de kiem tra: {2:N0} file)' -f $walker.HardLinkDupFiles, (Format-Size $walker.HardLinkDupBytes), $walker.HardLinkOpenFailures)
 if ($walker.Error) { Out-Line ('  [!] Loi bo quet: {0}' -f $walker.Error) }
 Out-Line ''
 Out-Line ('  File chi tiet: ThuMucLon.csv, FileLon.csv, FileMoiGhi.csv, PhanLoai.csv trong {0}' -f $runDir)
