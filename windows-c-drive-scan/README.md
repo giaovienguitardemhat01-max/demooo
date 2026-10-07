@@ -66,8 +66,9 @@ Mức phân loại trong báo cáo:
 
 - Bỏ qua junction/symlink nên không đếm trùng (ví dụ `C:\Documents and Settings`).
 - File OneDrive "chỉ trên cloud" không chiếm chỗ trên ổ nên không được tính vào tổng (báo riêng).
-- File nén NTFS/CompactOS/sparse được tính theo dung lượng thật trên đĩa.
-- `WinSxS` dùng hard link chung với `System32` nên số đo theo thư mục bị lớn hơn thực tế; con số chính xác lấy từ DISM ở mục [9].
+- File nén (NTFS, WOF/CompactOS) và file sparse được tính theo dung lượng thật trên đĩa, không theo kích thước danh nghĩa.
+- File có nhiều tên (hard link, ví dụ `WinSxS` ↔ `System32`) chỉ được tính một lần; con số chính thức của WinSxS lấy từ DISM ở mục [9].
+- Đã chạy thử trên Windows thật (Windows PowerShell 5.1, ~1,2 triệu file): tổng đo được lệch dưới 3% so với "đã dùng" của Windows; phần lệch là metadata NTFS và thư mục hệ thống bị khoá.
 - `System Volume Information` (nơi chứa restore point) không đọc trực tiếp được; dung lượng của nó lấy từ `vssadmin` / WMI ở mục [8].
 
 ## Lệnh hệ thống được gọi (đều chỉ đọc)
