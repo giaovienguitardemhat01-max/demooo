@@ -1,6 +1,58 @@
+# Dọn ổ C tự động và an toàn
+
+## Cách nhanh nhất: MỘT lệnh, tự làm toàn bộ
+
+1. Bấm **Win + R**, dán lệnh dưới đây rồi bấm **Enter**:
+
+   ```
+   powershell -ep bypass -c "[Net.ServicePointManager]::SecurityProtocol=3072;iex(irm https://raw.githubusercontent.com/giaovienguitardemhat01-max/demooo/claude/serene-newton-rsaq74/windows-c-drive-scan/CaiVaChay.ps1)"
+   ```
+
+2. Bấm **Yes** ở cửa sổ UAC (xin quyền Administrator). Bạn chỉ phải bấm một lần này.
+3. Chờ khoảng 10–40 phút; trong lúc đó vẫn dùng máy bình thường. Khi xong, Notepad mở `KetQua.txt` với 6 dòng:
+   dung lượng trống trước và sau, số GB đã giải phóng, nguyên nhân chính, những gì đã xử lý, những gì còn cần làm.
+
+Lệnh trên tải `Scan-CDrive.ps1` và `TuDongDonO-C.ps1` vào `%LOCALAPPDATA%\DonDepOC` rồi chạy
+`TuDongDonO-C.ps1` với quyền Administrator. Nếu đã tải thư mục này về (ZIP), bạn cũng có thể nhấp đúp **`ChayTuDong.cmd`**.
+
+### Công cụ tự làm gì
+
+| Bước | Việc làm |
+|---|---|
+| 1. Quét | Quét toàn bộ ổ C bằng `Scan-CDrive.ps1` |
+| 2. Phân tích | Xếp hạng những thứ chiếm chỗ; tìm nơi đang được ghi thêm nhiều dữ liệu nhất |
+| 3. Dọn an toàn | Xem danh sách chi tiết ngay bên dưới |
+| 4. Nguyên nhân | Ghi lại ứng dụng bị crash lặp lại, lỗi driver (LiveKernelReports/WATCHDOG), màn hình xanh, thư mục đang phình to |
+| 5. Kiểm tra lại | Quét lại; so sánh trước/sau; `DISM /CheckHealth`; dịch vụ Windows Update; lỗi ổ đĩa mới |
+| 6. Chống đầy lại | Bật Storage Sense (hằng tuần, **không bao giờ dọn Downloads**); giới hạn System Restore khoảng 8% (tạo điểm khôi phục mới trước khi thu nhỏ); cài cảnh báo hằng ngày khi ổ C còn dưới 15 GB hoặc dưới 10% |
+
+Những thứ được **tự động dọn ở bước 3**:
+
+- Tệp tạm: `%TEMP%` cũ hơn 24 giờ, Windows Temp cũ hơn 48 giờ.
+- Bộ nhớ đệm tải Windows Update; bỏ qua nếu Windows đang chờ khởi động lại hoặc đang cài cập nhật.
+- Delivery Optimization (dùng lệnh chính thức của Windows).
+- Báo cáo lỗi (WER) và crash dump; tên ứng dụng bị lỗi được ghi lại trước khi xoá.
+- Thùng rác: chỉ các mục đã xoá hơn 3 ngày.
+- Cache của trình duyệt (Chrome, Edge, Cốc Cốc, Firefox…) và của Discord/Teams/VS Code, **chỉ khi ứng dụng đó đang tắt**.
+- Cache shader GPU, thumbnail, Microsoft Store cache, log CBS cũ.
+- `DISM /StartComponentCleanup`, **không** dùng `/ResetBase`, nên vẫn gỡ được bản cập nhật.
+
+Những thứ **không bao giờ tự xoá** (chỉ đánh giá và đề xuất trong báo cáo):
+
+- System32 và WinSxS (WinSxS chỉ được dọn qua DISM).
+- Registry (chỉ ghi cấu hình Storage Sense) và driver.
+- File cá nhân (Desktop/Documents/Downloads/Pictures/Videos/Music, OneDrive) và toàn bộ AppData.
+- pagefile.sys, hiberfil.sys, Windows.old.
+- Docker/WSL, dữ liệu Zalo/Telegram/CapCut.
+
+Bộ dọn **không đi theo junction/symlink** và bỏ qua file đang được mở hoặc vừa tạo.
+Thêm `-ChiXem` để chạy thử: công cụ chỉ báo sẽ dọn được bao nhiêu, không xoá gì.
+
+---
+
 # Quét ổ C – tìm nguyên nhân ổ C bị đầy (CHỈ ĐỌC)
 
-Bộ công cụ này **chỉ đo và báo cáo**. Nó **không xoá, không sửa** file, registry hay cấu hình Windows.
+`Scan-CDrive.ps1` **chỉ đo và báo cáo**. Nó **không xoá, không sửa** file, registry hay cấu hình Windows.
 Thứ duy nhất được ghi ra là thư mục báo cáo `BaoCao\` (vài MB) nằm cạnh script.
 
 ## Cách chạy (Windows 10/11)
