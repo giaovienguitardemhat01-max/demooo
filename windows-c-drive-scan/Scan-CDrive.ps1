@@ -33,6 +33,9 @@
 .PARAMETER SkipDism
     Bo qua buoc phan tich WinSxS bang DISM (tiet kiem 1-5 phut).
 
+.PARAMETER NoOpen
+    Khong tu mo Notepad khi xong (dung khi goi tu script khac).
+
 .EXAMPLE
     powershell -NoProfile -ExecutionPolicy Bypass -File .\Scan-CDrive.ps1
 #>
@@ -41,7 +44,8 @@ param(
     [string]$OutputDir,
     [ValidateRange(1, 90)]
     [int]$RecentDays = 7,
-    [switch]$SkipDism
+    [switch]$SkipDism,
+    [switch]$NoOpen
 )
 
 $ErrorActionPreference = 'Continue'
@@ -54,6 +58,7 @@ if ([Environment]::Is64BitOperatingSystem -and -not [Environment]::Is64BitProces
         $argList = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $PSCommandPath, '-RecentDays', $RecentDays)
         if ($OutputDir) { $argList += @('-OutputDir', $OutputDir) }
         if ($SkipDism) { $argList += '-SkipDism' }
+        if ($NoOpen) { $argList += '-NoOpen' }
         & $native @argList
         return
     }
@@ -1587,7 +1592,7 @@ $ownList | ForEach-Object {
     $e = $dirIndex[$_.Path]
     [pscustomobject]@{
         Path = $_.Path; Depth = $e.Depth; Bytes = [long]$_.Total; OwnBytes = [long]$_.Own; Files = $_.Files
-        RecentBytes = $e.RecentBytes; CloudOnlyBytes = $e.CloudBytes; GB = [math]::Round($_.Total / 1GB, 2); OwnGB = [math]::Round($_.Own / 1GB, 2)
+        RecentBytes = $e.RecentBytes; OwnRecentBytes = [long]$_.OwnRecent; CloudOnlyBytes = $e.CloudBytes; GB = [math]::Round($_.Total / 1GB, 2); OwnGB = [math]::Round($_.Own / 1GB, 2)
     }
 } | Export-Csv -LiteralPath (Join-Path $runDir 'ThuMucLon.csv') -NoTypeInformation -Encoding UTF8
 $walker.TopFiles | ForEach-Object { [pscustomobject]@{ Path = $_.Path; Bytes = $_.Bytes; MB = [math]::Round($_.Bytes / 1MB, 1); LastWrite = $_.LastWriteUtc.ToLocalTime() } } |
@@ -1606,4 +1611,4 @@ if ($capacity -gt 0) {
 }
 Write-Host ('Bao cao: {0}' -f $reportPath)
 Write-Host 'Hay mo file BaoCao-TomTat.txt, xem lai (co the che ten file rieng tu), roi gui noi dung cho Claude.'
-if ($onWindows -and [Environment]::UserInteractive) { try { Start-Process -FilePath 'notepad.exe' -ArgumentList ('"{0}"' -f $reportPath) } catch { } }
+if ($onWindows -and -not $NoOpen -and [Environment]::UserInteractive) { try { Start-Process -FilePath 'notepad.exe' -ArgumentList ('"{0}"' -f $reportPath) } catch { } }
